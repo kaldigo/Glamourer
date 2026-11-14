@@ -1,0 +1,1 @@
+Glamourer retains its upstream identity and requires Penumbra. The fork follows the upstream testing branch. Routine updates are limited to unmodified documentation. Publish verified builds through the Release plugin workflow.

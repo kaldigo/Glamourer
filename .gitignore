@@ -3,3 +3,5 @@ obj/
 .vs/
 Glamourer.json
 private/
+/artifacts/
+__pycache__/

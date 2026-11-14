@@ -1,0 +1,33 @@
+{
+  "internal_name": "Glamourer",
+  "repository": "kaldigo/Glamourer",
+  "build": "Glamourer/bin/Release",
+  "required_dlls": [
+    "FlatSharp.Runtime.dll",
+    "Glamourer.Api.dll",
+    "Glamourer.dll",
+    "JetBrains.Annotations.dll",
+    "Luna.dll",
+    "Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+    "Microsoft.Extensions.DependencyInjection.dll",
+    "Microsoft.Extensions.Logging.Abstractions.dll",
+    "Microsoft.Extensions.Logging.dll",
+    "Microsoft.Extensions.Options.dll",
+    "Microsoft.Extensions.Primitives.dll",
+    "Penumbra.Api.dll",
+    "Penumbra.GameData.dll",
+    "Penumbra.String.dll",
+    "SharpGen.Runtime.COM.dll",
+    "SharpGen.Runtime.dll",
+    "System.IO.Hashing.dll",
+    "Vortice.DXGI.dll",
+    "Vortice.Direct3D11.dll",
+    "Vortice.DirectX.dll",
+    "Vortice.Mathematics.dll"
+  ],
+  "licenses": {
+    "LICENSE": "LICENSE",
+    "Luna/LICENSE": "licenses/Luna.txt",
+    "Luna/ImSharp/LICENSE": "licenses/ImSharp.txt"
+  }
+}
