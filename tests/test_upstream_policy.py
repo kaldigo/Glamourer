@@ -67,8 +67,9 @@ class UpstreamPolicyTests(unittest.TestCase):
         self.git('merge', '--no-edit', self.upstream)
         return policy_tool.classify(self.base, self.upstream, 'HEAD')
 
-    def test_routine_condition_and_documentation(self):
-        for path in ['docs/upstream-note.md', 'docs/usage.md']:
+    def test_routine_source_and_documentation(self):
+        for path in ['docs/upstream-note.md', 'docs/usage.md', 'Glamourer/Designs/Design.cs',
+                     'Glamourer/Gui/DesignPanel.cs', 'Glamourer/Automation/AutoDesign.cs']:
             with self.subTest(path=path):
                 result = self.propose(path, 'routine adjustment\n')
                 self.assertTrue(result['routine'], result['reasons'])

@@ -22,7 +22,7 @@ namespace Glamourer.Gui.Tabs.AutomationTab;
 public sealed class SetPanel(
     AutoDesignManager manager,
     DesignConditionsDrawer conditionsDrawer,
-    WardrobeOwnership wardrobe,
+    ItemUnlockManager itemUnlocks,
     SpecialDesignCombo designCombo,
     CustomizeUnlockManager customizeUnlocks,
     CustomizeService customizations,
@@ -349,13 +349,16 @@ public sealed class SetPanel(
                 continue;
 
             var equip = designData.Item(slot);
-            if (!wardrobe.Allows(slot, equip))
-                sb.AppendLine($"{equip.Name} in {slot.ToName()} slot has no confirmed wardrobe ownership or exemption.");
+            if (!itemUnlocks.IsUnlocked(equip.Id, out _))
+                sb.AppendLine($"{equip.Name} in {slot.ToName()} slot is not unlocked. Consider obtaining it via gameplay means!");
         }
 
         using var style = ImStyleDouble.ItemSpacing.Push(new Vector2(2 * Im.Style.GlobalScale, 0));
 
-        DrawWarning(sb, 0xA03030F0, size, "\nThese slots will be skipped.", "All equipment can be applied."u8);
+        var tt = config.UnlockedItemMode
+            ? "\nThese items will be skipped when applied automatically.\n\nTo change this, disable the Obtained Item Mode setting."
+            : string.Empty;
+        DrawWarning(sb, config.UnlockedItemMode ? 0xA03030F0 : 0x0, size, tt, "All equipment to be applied is unlocked."u8);
 
         sb.Clear();
         var sb2       = new StringBuilder();
@@ -380,8 +383,8 @@ public sealed class SetPanel(
         }
 
         Im.Line.Same();
-        var tt = config.UnlockedItemMode
-            ? "\nThese customizations will be skipped when applied automatically.\n\nTo change this, disable the unobtained customizations setting."
+        tt = config.UnlockedItemMode
+            ? "\nThese customizations will be skipped when applied automatically.\n\nTo change this, disable the Obtained Item Mode setting."
             : string.Empty;
         DrawWarning(sb2, config.UnlockedItemMode ? 0xA03030F0 : 0x0, size, tt, "All customizations to be applied are unlocked."u8);
         Im.Line.Same();

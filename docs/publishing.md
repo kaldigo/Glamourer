@@ -1,1 +1,1 @@
-Glamourer retains its upstream identity and requires Penumbra. The fork follows the upstream testing branch. Routine updates are limited to unmodified documentation. Publish verified builds through the Release plugin workflow.
+Glamourer retains its upstream identity and requires Penumbra. The fork checks upstream testing daily. Clean updates to documentation and C# files under Glamourer/Gui, Glamourer/Designs and Glamourer/Automation can merge and publish after validation. Changes to fork-modified files, dependencies, packaging or native interop require review.

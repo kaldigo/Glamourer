@@ -33,10 +33,12 @@ def classify(base, upstream, head):
             continue
         # Dependencies, publishing, configuration and unrecognised files never
         # qualify. A narrow allow-list prevents new build files slipping through.
-        routine_condition = False # Rotation, configuration and native-code changes always need review.
+        routine_source = p.suffix == '.cs' and p.parts[:2] in {
+            ('Glamourer', 'Gui'), ('Glamourer', 'Designs'), ('Glamourer', 'Automation'),
+        }
         routine_doc = (path == 'README.md' or path.startswith('docs/')) and p.suffix == '.md'
-        if not (routine_condition or routine_doc):
-            reasons.append(f'{path}: outside the routine documentation allow-list.')
+        if not (routine_source or routine_doc):
+            reasons.append(f'{path}: outside the routine source and documentation allow-list.')
             continue
         modes = [git('ls-tree', ref, '--', path).split(' ', 1)[0] for ref in (base, head)]
         if any(mode and mode != '100644' for mode in modes):

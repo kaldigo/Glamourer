@@ -2,7 +2,7 @@
 import argparse,hashlib,json,re,struct,zipfile
 from pathlib import Path
 
-def package(root,tag,changelog='Apply stored or exempt equipment per slot. The Equipment editor marks missing pieces using your saved dresser and armoire collections.'):
+def package(root,tag,changelog='Glamourer fork with a centered theatre-mask icon in the plugin family palette.'):
     if not re.fullmatch(r'v\d+\.\d+\.\d+\.\d+',tag):raise ValueError('Expected a four-part immutable release tag')
     cfg=json.loads((root/'release-config.json').read_text());name=cfg['internal_name'];build=root/cfg['build']
     manifest=json.loads((build/(name+'.json')).read_text(encoding='utf-8-sig'))
@@ -32,4 +32,4 @@ def package(root,tag,changelog='Apply stored or exempt equipment per slot. The E
     print('Packaged',name,manifest['AssemblyVersion']);return archive
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--tag',required=True);p.add_argument('--changelog-file');a=p.parse_args()
-    package(Path(__file__).resolve().parents[1],a.tag,Path(a.changelog_file).read_text(encoding='utf-8-sig').strip() if a.changelog_file else 'Apply stored or exempt equipment per slot. The Equipment editor marks missing pieces using your saved dresser and armoire collections.')
+    package(Path(__file__).resolve().parents[1],a.tag,Path(a.changelog_file).read_text(encoding='utf-8-sig').strip() if a.changelog_file else 'Glamourer fork with a centered theatre-mask icon in the plugin family palette.')

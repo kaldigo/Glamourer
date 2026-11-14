@@ -23,7 +23,6 @@ public class StateEditor(
     JobChangeState jobChange,
     Configuration config,
     ItemManager items,
-    Unlocks.WardrobeOwnership wardrobe,
     DesignMerger merger,
     ModSettingApplier modApplier,
     GPoseService gPose) : IDesignEditor
@@ -274,47 +273,9 @@ public class StateEditor(
     }
 
     /// <inheritdoc/>
-    protected static bool SkipCrest(CrestFlag crest, ModelCombinedSlots missing)
-        => (missing & (crest switch
-        {
-            CrestFlag.Head => ModelCombinedSlots.Head,
-            CrestFlag.Body => ModelCombinedSlots.Body,
-            CrestFlag.OffHand => ModelCombinedSlots.Offhand,
-            _ => 0,
-        })) != 0;
-
-    internal ModelCombinedSlots MissingSlots(ActorState state, MergedDesign merged, bool singleSource)
-    {
-        ModelCombinedSlots missing = 0;
-        foreach (var slot in EquipSlotExtensions.FullSlots)
-        {
-            if (!merged.Design.DoApplyEquip(slot))
-                continue;
-
-            var item = merged.Design.DesignData.Item(slot);
-            var source = merged.Sources[slot, false];
-            if (slot is EquipSlot.MainHand or EquipSlot.OffHand && !gPose.InGPose)
-            {
-                var current = slot == EquipSlot.MainHand ? state.BaseData.MainhandType : state.ModelData.MainhandType.Offhand();
-                foreach (var type in current.CompatibleTypes().Prepend(current))
-                {
-                    if (!merged.Weapons.TryGet(type, state.LastJob, true, out var candidate))
-                        continue;
-                    (item, source) = candidate;
-                    break;
-                }
-            }
-
-            if ((singleSource || source != StateSource.Game) && !wardrobe.Allows(slot, item))
-                missing |= MaterialValueIndex.FromSlot(slot).ToCombinedSlot();
-        }
-        return missing;
-    }
-
     public void ApplyDesign(object data, MergedDesign mergedDesign, ApplySettings settings)
     {
         var state = (ActorState)data;
-        var missing = MissingSlots(state, mergedDesign, settings.UseSingleSource);
         modApplier.HandleStateApplication(state, mergedDesign, settings.Source, true, settings.RespectManual, settings.ForceModAssociations);
         if (!Editor.ChangeModelId(state, mergedDesign.Design.DesignData.ModelId, mergedDesign.Design.DesignData.Customize,
                 mergedDesign.Design.GetDesignDataRef().GetEquipmentPtr(), settings.Source, out var oldModelId, settings.Key))
@@ -328,8 +289,6 @@ public class StateEditor(
         {
             foreach (var slot in CrestExtensions.AllRelevantSet.Where(mergedDesign.Design.DoApplyCrest))
             {
-                if (SkipCrest(slot, missing))
-                    continue;
                 if (!settings.RespectManual || !state.Sources[slot].IsManual())
                     Editor.ChangeCrest(state, slot, mergedDesign.Design.DesignData.Crest(slot), Source(slot),
                         out _, settings.Key);
@@ -371,8 +330,6 @@ public class StateEditor(
 
             foreach (var slot in EquipSlotExtensions.EqdpSlots)
             {
-                if ((missing & MaterialValueIndex.FromSlot(slot).ToCombinedSlot()) != 0)
-                    continue;
                 if (mergedDesign.Design.DoApplyEquip(slot))
                     if (!settings.RespectManual || !state.Sources[slot, false].IsManual())
                         Editor.ChangeItem(state, slot, mergedDesign.Design.DesignData.Item(slot),
@@ -393,8 +350,6 @@ public class StateEditor(
 
             foreach (var weaponSlot in EquipSlotExtensions.WeaponSlots)
             {
-                if ((missing & MaterialValueIndex.FromSlot(weaponSlot).ToCombinedSlot()) != 0)
-                    continue;
                 if (mergedDesign.Design.DoApplyStain(weaponSlot))
                     if (!settings.RespectManual || !state.Sources[weaponSlot, true].IsManual())
                         Editor.ChangeStains(state, weaponSlot, mergedDesign.Design.DesignData.Stain(weaponSlot),
@@ -431,8 +386,6 @@ public class StateEditor(
 
                             var source = settings.UseSingleSource ? settings.Source :
                                 weapon.Item2 is StateSource.Game  ? StateSource.Game : settings.Source;
-                            if (weapon.Item2 != StateSource.Game && !wardrobe.Allows(weaponSlot, weapon.Item1))
-                                break;
                             Editor.ChangeItem(state, weaponSlot, weapon.Item1, source, out _,
                                 settings.Key);
                             break;
@@ -442,7 +395,7 @@ public class StateEditor(
             }
 
             if (settings.FromJobChange)
-                jobChange.Set(state, mergedDesign.Weapons.Values.Where(m => m.Item2 == StateSource.Game || wardrobe.Allows(m.Item1.Type.ToSlot(), m.Item1)).Select(m =>
+                jobChange.Set(state, mergedDesign.Weapons.Values.Select(m =>
                     (m.Item1, settings.UseSingleSource ? settings.Source :
                         m.Item2 is StateSource.Game    ? StateSource.Game : settings.Source, m.Item3)));
 
@@ -454,11 +407,11 @@ public class StateEditor(
 
             if (settings.ResetMaterials || !settings.RespectManual && mergedDesign.ResetAdvancedDyes is not 0)
             {
-                if (missing == 0 && (settings.ResetMaterials || mergedDesign.ResetAdvancedDyes.HasFlag(ModelCombinedSlotsExtensions.All)))
+                if (settings.ResetMaterials || mergedDesign.ResetAdvancedDyes.HasFlag(ModelCombinedSlotsExtensions.All))
                     state.Materials.Clear();
                 else
                 {
-                    var slotsToReset = (settings.ResetMaterials ? ModelCombinedSlotsExtensions.All : mergedDesign.ResetAdvancedDyes) & ~missing;
+                    var slotsToReset = mergedDesign.ResetAdvancedDyes;
                     while (slotsToReset is not 0)
                     {
                         // TODO 20260824 Consider working on bit ranges to improve performance?
@@ -475,8 +428,6 @@ public class StateEditor(
                     continue;
 
                 var idx    = MaterialValueIndex.FromKey(key);
-                if ((missing & idx.ToCombinedSlot()) != 0)
-                    continue;
                 var source = settings.Source.SetPending();
                 if (state.Materials.TryGetValue(idx, out var materialState))
                 {
