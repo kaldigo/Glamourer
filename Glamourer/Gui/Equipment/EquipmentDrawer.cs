@@ -31,14 +31,17 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
     private readonly DesignApplier                          _designApplier;
     private readonly DesignConverter                        _converter;
 
+    private readonly WardrobeOwnership _wardrobe;
+
     private Stain?             _draggedStain;
     private EquipItemSlotCache _draggedItem;
     private EquipSlot          _dragTarget;
 
     public EquipmentDrawer(FavoriteManager favorites, IDataManager gameData, ItemManager items, TextureService textures,
         Configuration config, GPoseService gPose, AdvancedDyePopup advancedDyes, ItemCopyService itemCopy, DesignApplier designApplier,
-        DesignConverter converter)
+        DesignConverter converter, WardrobeOwnership wardrobe)
     {
+        _wardrobe       = wardrobe;
         _items          = items;
         _textures       = textures;
         _config         = config;
@@ -229,6 +232,19 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
     }
 
 
+    private bool DrawOwnershipBorder(in EquipDrawData data)
+    {
+        if (!data.IsDesign || _wardrobe.Allows(data.Slot, data.CurrentItem))
+            return false;
+
+        Im.Window.DrawList.Shape.Rectangle(Im.Item.UpperLeftCorner, Im.Item.LowerRightCorner,
+            0xFF507DEFu, Im.Style.FrameRounding, ImDrawFlagsRectangle.RoundCornersAll, 2 * Im.Style.GlobalScale);
+        Im.Tooltip.OnHover(_wardrobe.Confirmed
+            ? "Missing from your glamour dresser and armoire. Applying this item will skip this slot."u8
+            : "Ownership unverified. Open your dresser and armoire to check this item."u8);
+        return true;
+    }
+
     private void DrawItem(in EquipDrawData data, out StringU8 label, bool clear, bool open)
     {
         Debug.Assert(data.Slot.IsEquipment() || data.Slot.IsAccessory(), $"Called {nameof(DrawItem)} on {data.Slot}.");
@@ -240,13 +256,14 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
 
         using var disabled = Im.Disabled(data.Locked);
         var       change   = _drawCombo(this, combo, data.CurrentItem, out var newItem);
+        var missing = !_compact && DrawOwnershipBorder(data);
         DrawGearDragDrop(data);
         if (change)
             data.SetItem(newItem);
         _itemCopy.HandleCopyPaste(data);
 
         if (ResetOrClear(data.Locked, clear, data.AllowRevert, true, data.CurrentItem, data.GameItem, ItemManager.NothingItem(data.Slot),
-                out var item))
+                out var item, !missing))
             data.SetItem(item);
     }
 
@@ -320,7 +337,7 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
     }
 
     private static bool ResetOrClear<T>(bool locked, bool clicked, bool allowRevert, bool allowClear,
-        in T currentItem, in T revertItem, in T clearItem, out T? item) where T : IEquatable<T>
+        in T currentItem, in T revertItem, in T clearItem, out T? item, bool showTooltip = true) where T : IEquatable<T>
     {
         if (locked)
         {
@@ -346,7 +363,8 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
                 (false, true, _)  => RefTuple.Create("Right-click to clear.\nControl and mouse wheel to scroll."u8, clearItem,    true),
                 (false, false, _) => RefTuple.Create("Control and mouse wheel to scroll."u8,                        (T?)default!, false),
             };
-        Im.Tooltip.OnHover(tt);
+        if (showTooltip)
+            Im.Tooltip.OnHover(tt);
 
         return clicked && valid;
     }
@@ -369,11 +387,12 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
                 UiHelpers.OpenCombo(label);
             if (_drawCombo(this, combo, mainhand.CurrentItem, out var newItem))
                 changedItem = newItem;
+            var missing = !_compact && DrawOwnershipBorder(mainhand);
             _itemCopy.HandleCopyPaste(mainhand);
             DrawGearDragDrop(mainhand);
 
             if (ResetOrClear(mainhand.Locked || unknown, open, mainhand.AllowRevert, false, mainhand.CurrentItem, mainhand.GameItem,
-                    default,                             out var c))
+                    default,                             out var c, !missing))
                 changedItem = c;
 
             if (changedItem is not null)
@@ -411,11 +430,12 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
             UiHelpers.OpenCombo(combo.Label);
         if (_drawCombo(this, combo, offhand.CurrentItem, out var newItem))
             offhand.SetItem(newItem);
+        var missing = !_compact && DrawOwnershipBorder(offhand);
         _itemCopy.HandleCopyPaste(offhand);
         DrawGearDragDrop(offhand);
 
         var defaultOffhand = _items.GetDefaultOffhand(mainhand.CurrentItem);
-        if (ResetOrClear(locked, clear, offhand.AllowRevert, true, offhand.CurrentItem, offhand.GameItem, defaultOffhand, out var item))
+        if (ResetOrClear(locked, clear, offhand.AllowRevert, true, offhand.CurrentItem, offhand.GameItem, defaultOffhand, out var item, !missing))
             offhand.SetItem(item);
     }
 
@@ -774,6 +794,7 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
         {
             data.CurrentItem.DrawIcon(parent._textures, parent._iconSize, data.Slot);
             var left  = Im.Item.InvisibleButton("button"u8);
+            parent.DrawOwnershipBorder(data);
             var right = Im.Item.RightClicked();
             Im.Line.Same();
             using var group = Im.Group();
@@ -829,6 +850,7 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
 
             mainhand.CurrentItem.DrawIcon(parent._textures, parent._iconSize, EquipSlot.MainHand);
             var left = Im.Item.InvisibleButton("button"u8);
+            parent.DrawOwnershipBorder(mainhand);
             Im.Line.Same();
             using (Im.Group())
             {
@@ -857,6 +879,7 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
 
             offhand.CurrentItem.DrawIcon(parent._textures, parent._iconSize, EquipSlot.OffHand);
             left = Im.Item.InvisibleButton("button2"u8);
+            parent.DrawOwnershipBorder(offhand);
             var right = Im.Item.RightClicked();
             Im.Line.Same();
             using (Im.Group())
@@ -893,6 +916,7 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
             Im.Line.Same();
             data.CurrentItem.DrawIcon(parent._textures, parent._smallIconSize, data.Slot);
             var left  = Im.Item.InvisibleButton("button"u8);
+            parent.DrawOwnershipBorder(data);
             var right = Im.Item.RightClicked();
 
             parent.DrawItem(data, out _, right, left);
@@ -936,6 +960,7 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
             Im.Line.Same();
             mainhand.CurrentItem.DrawIcon(parent._textures, parent._smallIconSize, mainhand.Slot);
             var left = Im.Item.InvisibleButton("button"u8);
+            parent.DrawOwnershipBorder(mainhand);
 
             parent.DrawMainhand(ref mainhand, ref offhand, out _, allWeapons, left);
             if (mainhand.DisplayApplication)
@@ -958,6 +983,7 @@ public sealed class EquipmentDrawer : IUiService, IDisposable
             Im.Line.Same();
             offhand.CurrentItem.DrawIcon(parent._textures, parent._smallIconSize, offhand.Slot);
             left  = Im.Item.InvisibleButton("button"u8);
+            parent.DrawOwnershipBorder(offhand);
             var right = Im.Item.RightClicked();
 
             parent.DrawOffhand(mainhand, validOffhand, offhand, out _, right, left);

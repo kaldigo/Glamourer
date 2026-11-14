@@ -31,10 +31,11 @@ public sealed class StateManager(
     IClientState clientState,
     Configuration config,
     JobChangeState jobChange,
+    Unlocks.WardrobeOwnership wardrobe,
     DesignMerger merger,
     ModSettingApplier modApplier,
     GPoseService gPose)
-    : StateEditor(editor, applier, changeEvent, finalizeEvent, jobChange, config, items, merger, modApplier, gPose),
+    : StateEditor(editor, applier, changeEvent, finalizeEvent, jobChange, config, items, wardrobe, merger, modApplier, gPose),
         IReadOnlyDictionary<ActorIdentifier, ActorState>, IService
 {
     private readonly Dictionary<ActorIdentifier, ActorState> _states = [];
@@ -430,9 +431,9 @@ public sealed class StateManager(
         StateFinalized.Invoke(new StateFinalized.Arguments(StateFinalizationType.RevertEquipment, data));
     }
 
-    public void ResetStateFixed(ActorState state, bool respectManualPalettes, uint key = 0)
+    internal void ResetFixedCustomizations(ActorState state, bool respectManualPalettes)
     {
-        if (!state.Unlock(key))
+        if (!state.Unlock(0))
             return;
 
         foreach (var index in CustomizeIndex.Values.Where(i => state.Sources[i] is StateSource.Fixed))
@@ -441,36 +442,12 @@ public sealed class StateManager(
             state.ModelData.Customize[index] = state.BaseData.Customize[index];
         }
 
-        foreach (var slot in EquipSlotExtensions.FullSlots)
-        {
-            if (state.Sources[slot, true] is StateSource.Fixed)
-            {
-                state.Sources[slot, true] = StateSource.Game;
-                state.ModelData.SetStain(slot, state.BaseData.Stain(slot));
-            }
-
-            if (state.Sources[slot, false] is StateSource.Fixed)
-            {
-                state.Sources[slot, false] = StateSource.Game;
-                state.ModelData.SetItem(slot, state.BaseData.Item(slot));
-            }
-        }
-
         foreach (var slot in BonusExtensions.AllFlags)
         {
             if (state.Sources[slot] is StateSource.Fixed)
             {
                 state.Sources[slot] = StateSource.Game;
                 state.ModelData.SetBonusItem(slot, state.BaseData.BonusItem(slot));
-            }
-        }
-
-        foreach (var slot in CrestExtensions.AllRelevantSet)
-        {
-            if (state.Sources[slot] is StateSource.Fixed)
-            {
-                state.Sources[slot] = StateSource.Game;
-                state.ModelData.SetCrest(slot, state.BaseData.Crest(slot));
             }
         }
 
@@ -491,9 +468,47 @@ public sealed class StateManager(
             state.Sources[meta] = StateSource.Game;
             state.ModelData.SetMeta(meta, state.BaseData.GetMeta(meta));
         }
+    }
+
+    // Automation resets its base appearance before merging. Defer slot resets until
+    // the chosen items (including conditional links and random designs) are known.
+    internal void ResetFixedEquipment(ActorState state, bool respectManualPalettes, ModelCombinedSlots missing)
+    {
+        if (!state.Unlock(0))
+            return;
+
+        foreach (var slot in EquipSlotExtensions.FullSlots)
+        {
+            if ((missing & MaterialValueIndex.FromSlot(slot).ToCombinedSlot()) != 0)
+                continue;
+            if (state.Sources[slot, true] is StateSource.Fixed)
+            {
+                state.Sources[slot, true] = StateSource.Game;
+                state.ModelData.SetStain(slot, state.BaseData.Stain(slot));
+            }
+
+            if (state.Sources[slot, false] is StateSource.Fixed)
+            {
+                state.Sources[slot, false] = StateSource.Game;
+                state.ModelData.SetItem(slot, state.BaseData.Item(slot));
+            }
+        }
+
+        foreach (var slot in CrestExtensions.AllRelevantSet)
+        {
+            if (SkipCrest(slot, missing))
+                continue;
+            if (state.Sources[slot] is StateSource.Fixed)
+            {
+                state.Sources[slot] = StateSource.Game;
+                state.ModelData.SetCrest(slot, state.BaseData.Crest(slot));
+            }
+        }
 
         foreach (var (index, value) in state.Materials.Values.ToList())
         {
+            if ((MaterialValueIndex.FromKey(index).ToCombinedSlot() & missing) != 0)
+                continue;
             switch (value.Source)
             {
                 case StateSource.Fixed:

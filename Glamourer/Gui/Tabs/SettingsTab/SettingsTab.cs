@@ -92,8 +92,8 @@ public sealed class SettingsTab(
         Checkbox("Use Replacement Gear for Gear Unavailable to Your Race or Gender"u8,
             "Use different gender- and race-appropriate models as a substitute when detecting certain items not available for a characters current gender and race."u8,
             config.UseRestrictedGearProtection, v => config.UseRestrictedGearProtection = v);
-        Checkbox("Do Not Apply Unobtained Items in Automation"u8,
-            "Enable this if you want automatically applied designs to only consider items and customizations you have actually unlocked once, and skip those you have not."u8,
+        Checkbox("Do Not Apply Unobtained Customizations in Automation"u8,
+            "Enable this if you want automation to skip customizations you have never unlocked. Equipment uses your dresser and armoire collection."u8,
             config.UnlockedItemMode, v => config.UnlockedItemMode = v);
         Checkbox("Respect Manual Changes When Editing Automation"u8,
             "Whether changing any currently active automation group will respect manual changes to the character before re-applying the changed automation or not."u8,

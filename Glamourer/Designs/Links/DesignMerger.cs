@@ -17,7 +17,6 @@ public class DesignMerger(
     DesignManager designManager,
     CustomizeService customizeService,
     Configuration config,
-    ItemUnlockManager itemUnlocks,
     CustomizeUnlockManager customizeUnlocks) : IService
 {
     public MergedDesign Merge(LinkContainer designs, in CustomizeArray currentCustomize, in DesignData baseRef, bool respectOwnership,
@@ -48,10 +47,10 @@ public class DesignMerger(
             var collection = type.ApplyWhat(design);
             ReduceMeta(data, collection.Meta, ret, source);
             ReduceCustomize(data, collection.Customize, ref fixFlags, ret, source, respectOwnership, startBodyType);
-            ReduceEquip(data, collection.Equip, ret, source, respectOwnership);
+            ReduceEquip(data, collection.Equip, ret, source);
             ReduceBonusItems(data, collection.BonusItem, ret, source, respectOwnership);
-            ReduceMainhands(data, jobs, collection.Equip, ret, source, respectOwnership);
-            ReduceOffhands(data, jobs, collection.Equip, ret, source, respectOwnership);
+            ReduceMainhands(data, jobs, collection.Equip, ret, source);
+            ReduceOffhands(data, jobs, collection.Equip, ret, source);
             ReduceCrests(data, collection.Crest, ret, source);
             ReduceParameters(data, collection.Parameters, ret, source);
             ReduceMods(design as Design, ret, modAssociations);
@@ -145,8 +144,7 @@ public class DesignMerger(
         }
     }
 
-    private void ReduceEquip(in DesignData design, EquipFlag equipFlags, MergedDesign ret, StateSource source,
-        bool respectOwnership)
+    private void ReduceEquip(in DesignData design, EquipFlag equipFlags, MergedDesign ret, StateSource source)
     {
         equipFlags &= ~ret.Design.Application.Equip;
         if (equipFlags is 0)
@@ -159,8 +157,7 @@ public class DesignMerger(
             if (equipFlags.HasFlag(flag))
             {
                 var item = design.Item(slot);
-                if (!respectOwnership || itemUnlocks.IsUnlocked(item.Id, out _))
-                    ret.Design.GetDesignDataRef().SetItem(slot, item);
+                ret.Design.GetDesignDataRef().SetItem(slot, item);
                 ret.Design.SetApplyEquip(slot, true);
                 ret.Sources[slot, false] = source;
             }
@@ -205,27 +202,24 @@ public class DesignMerger(
         }
     }
 
-    private void ReduceMainhands(in DesignData design, JobFlag allowedJobs, EquipFlag equipFlags, MergedDesign ret, StateSource source,
-        bool respectOwnership)
+    private void ReduceMainhands(in DesignData design, JobFlag allowedJobs, EquipFlag equipFlags, MergedDesign ret, StateSource source)
     {
         if (!equipFlags.HasFlag(EquipFlag.Mainhand))
             return;
 
         var weapon = design.Item(EquipSlot.MainHand);
-        if (respectOwnership && !itemUnlocks.IsUnlocked(weapon.Id, out _))
-            return;
 
         if (!ret.Design.DoApplyEquip(EquipSlot.MainHand))
         {
             ret.Design.SetApplyEquip(EquipSlot.MainHand, true);
+            ret.Sources[EquipSlot.MainHand, false] = source;
             ret.Design.GetDesignDataRef().SetItem(EquipSlot.MainHand, weapon);
         }
 
         ret.Weapons.TryAdd(weapon.Type, weapon, source, allowedJobs);
     }
 
-    private void ReduceOffhands(in DesignData design, JobFlag allowedJobs, EquipFlag equipFlags, MergedDesign ret, StateSource source,
-        bool respectOwnership)
+    private void ReduceOffhands(in DesignData design, JobFlag allowedJobs, EquipFlag equipFlags, MergedDesign ret, StateSource source)
     {
         if (!equipFlags.HasFlag(EquipFlag.Offhand))
             return;
@@ -234,12 +228,11 @@ public class DesignMerger(
             return;
 
         var weapon = design.Item(EquipSlot.OffHand);
-        if (respectOwnership && !itemUnlocks.IsUnlocked(weapon.Id, out _))
-            return;
 
         if (!ret.Design.DoApplyEquip(EquipSlot.OffHand))
         {
             ret.Design.SetApplyEquip(EquipSlot.OffHand, true);
+            ret.Sources[EquipSlot.OffHand, false] = source;
             ret.Design.GetDesignDataRef().SetItem(EquipSlot.OffHand, weapon);
         }
 

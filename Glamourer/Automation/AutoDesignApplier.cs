@@ -270,7 +270,7 @@ public sealed class AutoDesignApplier : IDisposable, IRequiredService
     {
         if (set.BaseState is AutoDesignSet.Base.Game)
         {
-            _state.ResetStateFixed(state, respectManual);
+            _state.ResetFixedCustomizations(state, respectManual);
         }
         else if (!respectManual)
         {
@@ -285,17 +285,21 @@ public sealed class AutoDesignApplier : IDisposable, IRequiredService
         }
 
         forcedRedraw = false;
-        if (!_humans.IsHuman((uint)actor.AsCharacter->ModelContainer.ModelCharaId))
+        if (!_humans.IsHuman((uint)actor.AsCharacter->ModelContainer.ModelCharaId) || actor.IsTransformed)
+        {
+            if (set.BaseState is AutoDesignSet.Base.Game)
+                _state.ResetFixedEquipment(state, respectManual, 0);
             return;
-
-        if (actor.IsTransformed)
-            return;
+        }
 
         var mergedDesign = _designMerger.Merge(
             set.Designs.Where(d => d.Conditions.Match(actor))
                 .SelectMany(d => d.Design.AllLinks(newApplication, cond => cond.Match(actor))
                     .Select(l => (l.Design, l.Flags & d.Type, d.Conditions.JobFlags))),
             state.ModelData.Customize, state.BaseData, true, _config.AlwaysApplyAssociatedMods);
+
+        if (set.BaseState is AutoDesignSet.Base.Game)
+            _state.ResetFixedEquipment(state, respectManual, _state.MissingSlots(state, mergedDesign, false));
 
         if (_objects.IsInGPose && actor.IsGPoseOrCutscene)
         {
