@@ -67,6 +67,52 @@ public sealed class DesignLibraryApi : IApiService, IDisposable
         files.Move(node, Folder(parent));
     });
 
+    private IFileSystemFolder EditableFolder(string path)
+    {
+        var folder = Folder(path);
+        if (folder.IsRoot || folder.Locked)
+            throw new InvalidOperationException("This folder is locked or is the library root.");
+        return folder;
+    }
+
+    private void CheckDestination(IFileSystemNode node, IFileSystemFolder parent, string name)
+    {
+        if (parent.Children.Any(child => child != node && files.Equal(child.Name, name)))
+            throw new InvalidOperationException($"The destination already contains '{name}'.");
+    }
+
+    private static string Join(IFileSystemFolder parent, string name)
+        => parent.IsRoot ? name : $"{parent.FullPath}/{name}";
+
+    public string RelocateFolder(string path, string parentPath, string name) => Change(() => {
+        ValidateName(name);
+        var node = EditableFolder(path);
+        var parent = Folder(parentPath);
+        if (parent == node || parent.GetAncestors().Contains(node))
+            throw new InvalidOperationException("Choose a destination outside this folder.");
+        CheckDestination(node, parent, name);
+        files.RenameAndMove(node, Join(parent, name));
+    });
+
+    // Dissolve the folder. Check every destination before moving any child, including hidden designs.
+    public string DissolveFolder(string path, string promotedFolderPrefix) => Change(() => {
+        var node = EditableFolder(path);
+        var parent = node.Parent!;
+        var moves = node.Children.Select(child => (Child: child, Name:
+            (parent.IsRoot && child is IFileSystemFolder ? promotedFolderPrefix : "") + child.Name.ToString())).ToArray();
+        for (int i = 0; i < moves.Length; i++)
+        {
+            var (child, name) = moves[i];
+            if (child.Locked) throw new InvalidOperationException("Unlock the folder's contents in Glamourer first.");
+            CheckDestination(child, parent, name);
+            if (moves.Take(i).Any(m => files.Equal(m.Name, name)))
+                throw new InvalidOperationException($"Two contents would share the name '{name}'.");
+        }
+        foreach (var (child, name) in moves)
+            files.RenameAndMove(child, Join(parent, name));
+        files.Delete(node);
+    });
+
     public string SetTag(Guid id, string tag, bool add) => Change(() => {
         var design = designs.Designs.ByIdentifier(id) ?? throw new ArgumentException("Design no longer exists.");
         if (string.IsNullOrWhiteSpace(tag)) throw new ArgumentException("Enter a tag.");

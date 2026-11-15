@@ -33,6 +33,8 @@ public sealed class IpcProviders : IDisposable, IApiService
             new FuncProvider<string>(pi, "Aether.Glamourer.DesignLibrary", library.Snapshot),
             new FuncProvider<string, string, string>(pi, "Aether.Glamourer.CreateFolder", library.CreateFolder),
             new FuncProvider<Guid, string, string, string[], string>(pi, "Aether.Glamourer.CreateLinkedDesign", library.CreateDesign),
+            new FuncProvider<string, string, string, string>(pi, "Aether.Glamourer.RelocateFolder", library.RelocateFolder),
+            new FuncProvider<string, string, string>(pi, "Aether.Glamourer.DissolveFolder", library.DissolveFolder),
             new FuncProvider<Guid, string, string>(pi, "Aether.Glamourer.MoveDesign", library.MoveDesign),
             new FuncProvider<Guid, string, bool, string>(pi, "Aether.Glamourer.SetDesignTag", library.SetTag),
             IpcSubscribers.DeleteDesign.Provider(pi, api.Designs),
