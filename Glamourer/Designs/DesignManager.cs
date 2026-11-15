@@ -95,13 +95,19 @@ public sealed class DesignManager : DesignEditor, IService
 
     /// <summary> Create a new design of a given name. </summary>
     public Design CreateEmpty(string name, bool handlePath)
+        => CreateEmpty(name, handlePath, CreateNewGuid(), []);
+
+    internal Design CreateEmpty(string name, bool handlePath, Guid identifier, string[] tags)
     {
+        if (identifier == Guid.Empty || Designs.Contains(identifier))
+            throw new ArgumentException("Design identifier is already in use.");
         var (actualName, path) = ParseName(name, handlePath);
         var design = new Design(Customizations, Items)
         {
             CreationDate           = DateTimeOffset.UtcNow,
             LastEdit               = DateTimeOffset.UtcNow,
-            Identifier             = CreateNewGuid(),
+            Identifier             = identifier,
+            Tags                   = tags,
             Name                   = actualName,
             Index                  = Designs.Count,
             ForcedRedraw           = Config.DefaultDesignSettings.AlwaysForceRedrawing,
