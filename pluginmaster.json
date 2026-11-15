@@ -17,15 +17,15 @@
       "Character"
     ],
     "InternalName": "Glamourer",
-    "AssemblyVersion": "9.0.0.5",
+    "AssemblyVersion": "9.0.0.6",
     "RepoUrl": "https://github.com/kaldigo/Glamourer",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "ImageUrls": null,
     "IconUrl": "https://raw.githubusercontent.com/kaldigo/Glamourer/testing/images/icon.png",
     "Changelog": "Glamourer fork with a centered theatre-mask icon in the plugin family palette.",
-    "DownloadLinkInstall": "https://github.com/kaldigo/Glamourer/releases/download/v9.0.0.5/Glamourer.zip",
-    "DownloadLinkUpdate": "https://github.com/kaldigo/Glamourer/releases/download/v9.0.0.5/Glamourer.zip",
-    "DownloadLinkTesting": "https://github.com/kaldigo/Glamourer/releases/download/v9.0.0.5/Glamourer.zip"
+    "DownloadLinkInstall": "https://github.com/kaldigo/Glamourer/releases/download/v9.0.0.6/Glamourer.zip",
+    "DownloadLinkUpdate": "https://github.com/kaldigo/Glamourer/releases/download/v9.0.0.6/Glamourer.zip",
+    "DownloadLinkTesting": "https://github.com/kaldigo/Glamourer/releases/download/v9.0.0.6/Glamourer.zip"
   }
 ]
