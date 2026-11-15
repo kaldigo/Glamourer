@@ -29,7 +29,7 @@ public sealed class DesignLibraryApi : IApiService, IDisposable
 
     public string Snapshot() => snapshot ??= JsonSerializer.Serialize(new {
         Folders = files.Root.GetDescendants().OfType<IFileSystemFolder>().Select(f => f.FullPath),
-        Designs = designs.Designs.Select(d => new { Id = d.Identifier, d.Name, d.Tags,
+        Designs = designs.Designs.Select(d => new { Id = d.Identifier, d.Name, d.Tags, MainHand = d.DesignData.Item(Penumbra.GameData.Enums.EquipSlot.MainHand).ItemId.Id,
             Folder = d.Node?.Parent?.FullPath ?? string.Empty, d.LastEdit })
     });
 
@@ -112,6 +112,21 @@ public sealed class DesignLibraryApi : IApiService, IDisposable
             files.RenameAndMove(child, Join(parent, name));
         files.Delete(node);
     });
+
+    private Design EditableDesign(Guid id)
+    {
+        var design = designs.Designs.ByIdentifier(id) ?? throw new ArgumentException("Design no longer exists.");
+        if (design.WriteProtected() || design.Node?.Locked == true)
+            throw new InvalidOperationException("Unlock this design in Glamourer first.");
+        return design;
+    }
+
+    public string RenameDesign(Guid id, string name) => Change(() => {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Enter a design name.");
+        designs.Rename(EditableDesign(id), name.Trim());
+    });
+
+    public string DeleteDesign(Guid id) => Change(() => designs.Delete(EditableDesign(id)));
 
     public string SetTag(Guid id, string tag, bool add) => Change(() => {
         var design = designs.Designs.ByIdentifier(id) ?? throw new ArgumentException("Design no longer exists.");
